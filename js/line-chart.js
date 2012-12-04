@@ -116,9 +116,29 @@ var LineCharts = function () {
 
         drawSeries: function(seriesIndex) {
 
+            // update the headline of the chart so we know for which
+            // data sets we are plotting
             d3.select('.headline')
                 .text(seriesIndex);
 
+            // Select all the available data points on the graph and
+            // associate them with the data set.
+            var dataPoints = svg
+                .selectAll('.data-point')
+                .data(chartData[seriesIndex]);
+
+            // For any new data points, create a circle on the graph
+            dataPoints.enter()
+                .append('circle')
+                .attr('class', 'data-point')
+                .attr('cx', function(d) {
+                    return d.x * 50;
+                })
+                .attr('cy', function(d) {
+                    console.log(d);
+                    return d.y / 10;
+                })
+                .attr('r', 4);
         }
 
     }
