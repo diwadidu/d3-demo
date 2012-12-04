@@ -3,7 +3,7 @@
  *
  */
 
-var LineCharts = function() {
+var LineCharts = function () {
 
 
     /**
@@ -30,7 +30,7 @@ var LineCharts = function() {
      *
      * @type {Array}
      */
-    var months = ['', 'Jan', 'Feb', 'Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     /**
      * Will contain the list of labels/IDs for the available
@@ -53,7 +53,7 @@ var LineCharts = function() {
 
         self: this,
 
-        init: function(w, h) {
+        init: function (w, h) {
 
             width = w;
             height = h;
@@ -61,18 +61,16 @@ var LineCharts = function() {
             d3.json('js/top15.json', this.processData.bind(this));
         },
 
-        processData: function(data) {
+        processData: function (data) {
 
             var series,
                 self = this;
 
-            console.log(data);
-
             for (var site in data) {
                 series = [];
                 for (var mo in data[site]) {
-                    idx = parseInt(mo.substr(4,2), 10);
-                    series.push({y: parseInt(data[site][mo], 10), x: idx, xname: months[idx]});
+                    idx = parseInt(mo.substr(4, 2), 10);
+                    series.push({y:parseInt(data[site][mo], 10), x:idx, xname:months[idx]});
                 }
 
                 chartData[site] = series;
@@ -84,8 +82,45 @@ var LineCharts = function() {
                 .data(availableSeries)
                 .enter()
                 .append('li')
-                .text(function(d) {return d});
+                .text(function (d) {
+                    return d
+                })
+                .on('click', function () {
+                    var newURL = d3.select(this).text();
+                    self.updateChart(newURL)
+                });
+
+            this.initPlot();
+        },
+
+
+        initPlot: function () {
+            svg = d3.select('#line-graph')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            svg.append('svg:text')
+                .text('')
+                .attr('dx', 0)
+                .attr('dy', 15)
+                .attr('class', 'headline');
+
+        },
+
+
+        updateChart: function(newURL) {
+            this.drawSeries(newURL);
+        },
+
+
+        drawSeries: function(seriesIndex) {
+
+            d3.select('.headline')
+                .text(seriesIndex);
+
         }
+
     }
 }();
 
