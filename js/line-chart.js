@@ -139,6 +139,16 @@ var LineCharts = function () {
                     return height - graphMargin - d.y / 10;
                 })
                 .attr('r', 4);
+
+            // Any data points that have new values: move them
+            // to their new location
+            dataPoints
+                .transition()
+                .duration(750)
+                .attr('cy', function(d) {return height - graphMargin - d.y / 10})
+                ;
+
+
         }
 
     }
