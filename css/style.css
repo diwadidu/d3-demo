@@ -1,0 +1,65 @@
+.data-point {
+    background: #234;
+}
+
+#line-graph {
+    border: 1px solid #ddd;
+    width: 600px;
+    float:left;
+    margin-right: 15px;
+    background: #eee;
+}
+
+.axis {
+    font-family: Helvetica, Arial;
+    font-size:11px;
+}
+
+path {
+    fill:none;
+    stroke: black;
+    stroke-width: 2px;
+}
+
+path.data-path {
+    stroke: #3453a0;
+    opacity: 0.6;
+    stroke-width: 1px;
+}
+
+
+.tick {
+    fill:none;
+    stroke:black;
+}
+
+circle {
+    stroke: none;
+    fill: #3453a0;
+    /*opacity: 0.6;*/
+    cursor: pointer;
+}
+
+line.grid {
+    stroke: #ddd;
+    fill:none;
+    stroke-width: 1px;
+    stroke-dasharray: 5, 5;
+}
+
+.headline {
+    width: 100%;
+    font-size: 14px;
+    font-family: Helvetica, Arial, sans-serif;
+    font-weight: bold;
+    text-align: center;
+}
+
+li {
+    cursor: pointer;
+}
+
+.axis-label {
+    font-size: 13px;
+
+}
