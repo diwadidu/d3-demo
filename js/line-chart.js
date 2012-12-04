@@ -135,7 +135,6 @@ var LineCharts = function () {
                     return d.x * 50;
                 })
                 .attr('cy', function(d) {
-                    console.log(d);
                     return height - graphMargin - d.y / 10;
                 })
                 .attr('r', 4);
@@ -147,6 +146,15 @@ var LineCharts = function () {
                 .duration(750)
                 .attr('cy', function(d) {return height - graphMargin - d.y / 10})
                 ;
+
+
+            dataPoints.exit()
+                .transition()
+                .duration(750)
+                .attr('opacity', 0)
+                .attr('y', height - graphMargin)
+                .remove();
+
 
 
         }
