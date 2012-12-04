@@ -136,7 +136,7 @@ var LineCharts = function () {
                 })
                 .attr('cy', function(d) {
                     console.log(d);
-                    return d.y / 10;
+                    return height - graphMargin - d.y / 10;
                 })
                 .attr('r', 4);
         }
