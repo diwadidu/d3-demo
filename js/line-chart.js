@@ -91,6 +91,8 @@ var LineCharts = function () {
                 });
 
             this.initPlot();
+            this.drawSeries(availableSeries[0]);
+
         },
 
 
@@ -121,6 +123,12 @@ var LineCharts = function () {
             d3.select('.headline')
                 .text(seriesIndex);
 
+            // Create the axes for the chart and also determine
+            // the scales for the axes.
+            var scales = this.setAxis(chartData[seriesIndex]);
+            this.drawAxes(scales);
+
+
             // Select all the available data points on the graph and
             // associate them with the data set.
             var dataPoints = svg
@@ -131,20 +139,21 @@ var LineCharts = function () {
             dataPoints.enter()
                 .append('circle')
                 .attr('class', 'data-point')
-                .attr('cx', function(d) {
-                    return d.x * 50;
-                })
-                .attr('cy', function(d) {
-                    return height - graphMargin - d.y / 10;
-                })
-                .attr('r', 4);
+
+
+                .attr('cx', function(d) {return scales.x(d.x);})
+                .attr('cy', height - graphMargin)
+                .attr('r', 4)
+                .transition()
+                .duration(750)
+                .attr('cy', function(d) {return scales.y(d.y)});
 
             // Any data points that have new values: move them
             // to their new location
             dataPoints
                 .transition()
                 .duration(750)
-                .attr('cy', function(d) {return height - graphMargin - d.y / 10})
+                .attr('cy', function(d) {return scales.y(d.y)})
                 ;
 
 
@@ -157,6 +166,60 @@ var LineCharts = function () {
 
 
 
+        },
+
+
+        drawAxes: function(scales) {
+
+            // Draw the axes
+            var xAxis = d3.svg.axis().scale(scales.x);
+            var yAxis = d3.svg.axis().scale(scales.y).orient('left');
+
+            svg.selectAll('g.axis').remove();
+            svg.selectAll('line.grid').remove();
+
+            svg.append('g')
+                .attr('class', 'x axis')
+                .attr('transform', 'translate(0,' + (height - graphMargin) + ')')
+                .call(xAxis);
+
+            svg.append('g')
+                .attr('class', 'y axis')
+                .attr('transform', 'translate(' + graphMargin + ',0)')
+                .call(yAxis);
+
+
+
+            d3.select('.y.axis')
+                .append('text')
+                .text('Outbound clicks / month')
+                .attr('class', 'axis-label')
+                .attr('transform', 'rotate(270, 6, 100)')
+                .attr('x', -200)
+                .attr('y', 50);
+
+
+            svg.selectAll('g.y.axis > g').each(function(d,i) {
+
+                var yOffset = parseFloat(d3.select(this).attr('transform').split(',')[1])
+                svg.append('line')
+                    .attr('class', 'y grid')
+                    .attr('x1', graphMargin)
+                    .attr('x2', width - graphMargin)
+                    .attr('y1', yOffset)
+                    .attr('y2', yOffset);
+            })
+        },
+
+        setAxis: function(dataSet) {
+
+            var xRange = d3.extent([0,1,2,3,4,5,6,7,8,9,10]);
+            var xScale = d3.scale.linear().range([graphMargin, width - graphMargin]).domain(xRange);
+
+            var yRange = [1, d3.max(dataSet, function(d) {return d.y})]
+            var yScale = d3.scale.linear().range([height - graphMargin, graphMargin]).domain([1,2000]);
+
+            return {x: xScale, y: yScale};
         }
 
     }
