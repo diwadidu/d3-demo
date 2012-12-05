@@ -165,6 +165,22 @@ var LineCharts = function () {
                 .remove();
 
 
+            var line = d3.svg.line()
+                .x(function(d) {return scales.x(d.x)})
+                .y(height - graphMargin);
+
+            svg.append('path')
+                .attr('d', line(chartData[seriesIndex]))
+                .attr('class', 'data-path');
+
+            line.y(function(d) {return scales.y(d.y)});
+
+            svg.select('path.data-path')
+                .transition()
+                .duration(750)
+                .attr('d', line(chartData[seriesIndex]));
+
+
 
         },
 
