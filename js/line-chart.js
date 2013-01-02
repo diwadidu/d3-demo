@@ -30,7 +30,7 @@ var LineCharts = function () {
      *
      * @type {Array}
      */
-    var months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
     /**
      * Will contain the list of labels/IDs for the available
@@ -58,23 +58,36 @@ var LineCharts = function () {
             width = w;
             height = h;
 
-            d3.json('js/top15.json', this.processData.bind(this));
+            d3.json('http://dev.torsten-muller.com/ads/lutsen.php', this.processData.bind(this));
         },
 
         processData: function (data) {
 
-            var series,
+            var series, adId, e, sDate, item,
+                minDate, maxDate,
                 self = this;
 
-            for (var site in data) {
+
+            for (var adId in data) {
                 series = [];
-                for (var mo in data[site]) {
-                    idx = parseInt(mo.substr(4, 2), 10);
-                    series.push({y:parseInt(data[site][mo], 10), x:idx, xname:months[idx]});
+                minDate = 9999999999999999999;
+                maxDate = 0;
+                for (var e in data[adId]) {
+
+                    sDate = new Date(data[adId][e].mpls_date);
+                    if (sDate.getTime() < minDate) minDate = sDate.getTime();
+                    if (sDate.getTime() > maxDate) maxDate = sDate.getTime();
+
+                    item = {
+                        'date': sDate,
+                        'impressions': parseInt(data[adId][e].imp, 10),
+                        'clicks': parseInt(data[adId][e].clk, 10)
+                    };
+                    series.push(item);
                 }
 
-                chartData[site] = series;
-                availableSeries.push(site);
+                chartData[adId] = series;
+                availableSeries.push({id: adId, name: data[adId][0].description, minDate: minDate, maxDate: maxDate});
             }
 
             d3.select('#data-sets')
@@ -83,11 +96,18 @@ var LineCharts = function () {
                 .enter()
                 .append('li')
                 .text(function (d) {
-                    return d
+                    return d.name
                 })
+                .attr('data-id', function(d) {return d.id})
                 .on('click', function () {
-                    var newURL = d3.select(this).text();
-                    self.updateChart(newURL)
+                    var newSeries = d3.select(this).attr('data-id');
+                    var i, l = availableSeries.length;
+                    for (i=0; i < l; i++) {
+                        if (availableSeries[i].id == newSeries) {
+                            self.updateChart(availableSeries[i]);
+                            break;
+                        }
+                    }
                 });
 
             this.initPlot();
@@ -116,44 +136,80 @@ var LineCharts = function () {
         },
 
 
-        drawSeries: function(seriesIndex) {
+        drawSeries: function(seriesHead) {
+
+
+            var self = this;
 
             // update the headline of the chart so we know for which
             // data sets we are plotting
             d3.select('.headline')
-                .text(seriesIndex);
+                .text(seriesHead.name);
 
             // Create the axes for the chart and also determine
             // the scales for the axes.
-            var scales = this.setAxis(chartData[seriesIndex]);
-            this.drawAxes(scales);
+            var xScale = this.scaleX(seriesHead);
+            var yScale = this.impressionScale(seriesHead.id);
+
+            this.drawAxes(xScale, yScale);
+
+
+            // Draw the line first so that hovers over circles get registered!
+            var line = d3.svg.line()
+                .x(function(d) {return xScale(new Date(d.date).getTime())})
+                .y(height - graphMargin);
+
+            svg.append('path')
+                .attr('d', line(chartData[seriesHead.id]))
+                .attr('class', 'data-path');
+
+            line.y(function(d) {return yScale(d.impressions)});
+
+            svg.select('path.data-path')
+                .transition()
+                .duration(750)
+                .attr('d', line(chartData[seriesHead.id]));
 
 
             // Select all the available data points on the graph and
             // associate them with the data set.
             var dataPoints = svg
                 .selectAll('.data-point')
-                .data(chartData[seriesIndex]);
+                .data(chartData[seriesHead.id], function(d) {return d.impressions});
 
             // For any new data points, create a circle on the graph
             dataPoints.enter()
                 .append('circle')
                 .attr('class', 'data-point')
-
-
-                .attr('cx', function(d) {return scales.x(d.x);})
+                .attr('cx', function(d) {return xScale(new Date(d.date).getTime());})
                 .attr('cy', height - graphMargin)
                 .attr('r', 4)
+                .attr('data-num', function(d) { return JSON.stringify(d); })
+                .on('mouseover', function() {
+
+                    d3.select(this).transition().attr('r', 7);
+                    var data = JSON.parse(d3.select(this).attr('data-num'));
+
+                    document.getElementById('date').textContent = self.formatDate(data.date);
+                    document.getElementById('impressions').textContent = data.impressions;
+                    document.getElementById('clicks').textContent = data.clicks;
+                    document.getElementById('clickthrough').textContent = Math.round(data.clicks / data.impressions * 10000) / 100 + '%';
+
+                    document.getElementById('tooltip').style.display = 'block';
+                })
+                .on('mouseout', function() {
+                    d3.select(this).transition().attr('r', 4);
+                })
                 .transition()
                 .duration(750)
-                .attr('cy', function(d) {return scales.y(d.y)});
+                .attr('cy', function(d) {return yScale(d.impressions)});
 
             // Any data points that have new values: move them
             // to their new location
             dataPoints
                 .transition()
                 .duration(750)
-                .attr('cy', function(d) {return scales.y(d.y)})
+                .attr('cy', function(d) {return yScale(d.impressions)})
                 ;
 
 
@@ -165,31 +221,30 @@ var LineCharts = function () {
                 .remove();
 
 
-            var line = d3.svg.line()
-                .x(function(d) {return scales.x(d.x)})
-                .y(height - graphMargin);
-
-            svg.append('path')
-                .attr('d', line(chartData[seriesIndex]))
-                .attr('class', 'data-path');
-
-            line.y(function(d) {return scales.y(d.y)});
-
-            svg.select('path.data-path')
-                .transition()
-                .duration(750)
-                .attr('d', line(chartData[seriesIndex]));
 
 
 
         },
 
 
-        drawAxes: function(scales) {
+
+        formatDate: function(date) {
+
+            var fDate = '';
+//            var d = new Date(date);
+            var d = new Date(new Date(date).getTime() + 6*3600000);
+
+            fDate += monthNames[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+            return fDate;
+        },
+
+
+
+        drawAxes: function(x, y) {
 
             // Draw the axes
-            var xAxis = d3.svg.axis().scale(scales.x);
-            var yAxis = d3.svg.axis().scale(scales.y).orient('left');
+            var xAxis = d3.svg.axis().scale(x);
+            var yAxis = d3.svg.axis().scale(y).orient('left');
 
             svg.selectAll('g.axis').remove();
             svg.selectAll('line.grid').remove();
@@ -208,7 +263,7 @@ var LineCharts = function () {
 
             d3.select('.y.axis')
                 .append('text')
-                .text('Outbound clicks / month')
+                .text('Impressions/ day')
                 .attr('class', 'axis-label')
                 .attr('transform', 'rotate(270, 6, 100)')
                 .attr('x', -200)
@@ -224,8 +279,33 @@ var LineCharts = function () {
                     .attr('x2', width - graphMargin)
                     .attr('y1', yOffset)
                     .attr('y2', yOffset);
-            })
+            });
         },
+
+
+
+        scaleX: function(headData) {
+
+            var scale = d3.time
+                          .scale()
+                          .domain([headData.minDate, headData.maxDate])
+                          .range([graphMargin, width - graphMargin]);
+
+            return scale;
+        },
+
+
+
+        impressionScale: function(dataId) {
+
+            var domain = [0, d3.max(chartData[dataId], function(d) {return d.impressions})];
+            var scale = d3.scale.linear()
+                                  .range([height - graphMargin, graphMargin])
+                                  .domain(domain);
+
+            return scale;
+        },
+
 
         setAxis: function(dataSet) {
 
@@ -233,7 +313,7 @@ var LineCharts = function () {
             var xScale = d3.scale.linear().range([graphMargin, width - graphMargin]).domain(xRange);
 
             var yRange = [1, d3.max(dataSet, function(d) {return d.y})]
-            var yScale = d3.scale.linear().range([height - graphMargin, graphMargin]).domain([1,2000]);
+            var yScale = d3.scale.linear().range([height - graphMargin, graphMargin]).domain(yRng);
 
             return {x: xScale, y: yScale};
         }
@@ -241,3 +321,8 @@ var LineCharts = function () {
     }
 }();
 
+
+Number.prototype.zeroPad = function(digits) {
+    var a = '00000000' + this;
+    return a.substr(a.length - digits, digits);
+};
